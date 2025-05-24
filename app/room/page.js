@@ -45,7 +45,7 @@ export default function RoomPage() {
       const room = new Room();
       roomRef.current = room;
 
-      await room.connect("ws://localhost:7880", token);
+      await room.connect("wss://localhost:7880", token);
 
       if (isPublisher) {
         const localTracks = await createLocalTracks({ audio: true, video: true });
