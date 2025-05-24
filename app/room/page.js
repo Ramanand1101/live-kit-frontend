@@ -42,10 +42,15 @@ export default function RoomPage() {
       );
 
       const token = response.data.token;
+      console.log(token,"dsfsf")
       const room = new Room();
       roomRef.current = room;
 
-      await room.connect("wss://localhost:7880", token);
+      await room.connect(
+  process.env.NEXT_PUBLIC_LIVEKIT_WS_URL, // From .env: wss://webrtc-j6vp82v9.livekit.cloud
+  response.data.token
+);
+
 
       if (isPublisher) {
         const localTracks = await createLocalTracks({ audio: true, video: true });
