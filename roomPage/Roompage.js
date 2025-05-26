@@ -33,7 +33,7 @@ export default function RoomPage() {
   const handleJoin = async () => {
     try {
       const response = await axios.post(
-        process.env.NEXT_PUBLIC_TOKEN_ENDPOINT,
+        "https://live-kit-backend.onrender.com/get-token",
         {
           identity,
           roomName,
