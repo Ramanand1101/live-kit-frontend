@@ -19,12 +19,14 @@ export default function RoomPage() {
 
   const [joined, setJoined] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
   const [participants, setParticipants] = useState([]);
 
   const localVideoRef = useRef(null);
   const remoteVideosRef = useRef({});
   const roomRef = useRef(null);
   const currentVideoTrackRef = useRef(null);
+  const currentAudioTrackRef = useRef(null);
 
   useEffect(() => {
     if (identity && roomName) handleJoin();
@@ -46,17 +48,16 @@ export default function RoomPage() {
       roomRef.current = room;
 
       await room.connect("https://meet.lcmgo.com", token);
-      
-      
 
       if (isPublisher) {
         const localTracks = await createLocalTracks({ audio: true, video: true });
         for (const track of localTracks) {
-          console.log("Publishing:", track.kind);
           await room.localParticipant.publishTrack(track);
         }
 
         const videoTrack = localTracks.find((t) => t.kind === "video");
+        const audioTrack = localTracks.find((t) => t.kind === "audio");
+
         if (videoTrack) {
           currentVideoTrackRef.current = videoTrack;
           setTimeout(() => {
@@ -64,6 +65,10 @@ export default function RoomPage() {
               videoTrack.attach(localVideoRef.current);
             }
           }, 300);
+        }
+
+        if (audioTrack) {
+          currentAudioTrackRef.current = audioTrack;
         }
       }
 
@@ -74,36 +79,37 @@ export default function RoomPage() {
       });
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-        setParticipants((prev) => prev.filter((id) => id !== participant.identity));
+        setParticipants((prev) =>
+          prev.filter((id) => id !== participant.identity)
+        );
       });
 
-   const attachRemoteTrack = (track, participant) => {
-  if (track.kind === "video") {
-    let videoEl = remoteVideosRef.current[participant.identity];
-    if (!videoEl) {
-      const container = document.getElementById("remote-container");
-      if (!container) return;
-      videoEl = document.createElement("video");
-      videoEl.autoplay = true;
-      videoEl.playsInline = true;
-      videoEl.width = 300;
-      videoEl.style.borderRadius = "10px";
-      videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-      container.appendChild(videoEl);
-      remoteVideosRef.current[participant.identity] = videoEl;
-    }
-    track.attach(videoEl);
-  }
+      const attachRemoteTrack = (track, participant) => {
+        if (track.kind === "video") {
+          let videoEl = remoteVideosRef.current[participant.identity];
+          if (!videoEl) {
+            const container = document.getElementById("remote-container");
+            if (!container) return;
+            videoEl = document.createElement("video");
+            videoEl.autoplay = true;
+            videoEl.playsInline = true;
+            videoEl.width = 300;
+            videoEl.style.borderRadius = "10px";
+            videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+            container.appendChild(videoEl);
+            remoteVideosRef.current[participant.identity] = videoEl;
+          }
+          track.attach(videoEl);
+        }
 
-  if (track.kind === "audio") {
-    const audioEl = document.createElement("audio");
-    audioEl.autoplay = true;
-    audioEl.controls = false;
-    track.attach(audioEl);
-    document.body.appendChild(audioEl); // or just attach without appending
-  }
-};
-
+        if (track.kind === "audio") {
+          const audioEl = document.createElement("audio");
+          audioEl.autoplay = true;
+          audioEl.controls = false;
+          track.attach(audioEl);
+          document.body.appendChild(audioEl);
+        }
+      };
 
       room.on(RoomEvent.TrackSubscribed, attachRemoteTrack);
       room.on(RoomEvent.TrackPublicationSubscribed, attachRemoteTrack);
@@ -141,6 +147,27 @@ export default function RoomPage() {
       currentVideoTrackRef.current = videoTrack;
       videoTrack.attach(localVideoRef.current);
       setCameraEnabled(true);
+    }
+  };
+
+  const handleToggleMic = async () => {
+    const room = roomRef.current;
+    if (!room || !room.localParticipant) return;
+
+    const existingTrack = currentAudioTrackRef.current;
+
+    if (micEnabled) {
+      if (existingTrack) {
+        await room.localParticipant.unpublishTrack(existingTrack);
+        existingTrack.stop();
+        currentAudioTrackRef.current = null;
+      }
+      setMicEnabled(false);
+    } else {
+      const [audioTrack] = await createLocalTracks({ audio: true });
+      await room.localParticipant.publishTrack(audioTrack);
+      currentAudioTrackRef.current = audioTrack;
+      setMicEnabled(true);
     }
   };
 
@@ -188,6 +215,9 @@ export default function RoomPage() {
           <div style={{ marginTop: 10 }}>
             <button onClick={handleToggleCamera} className={styles.button}>
               {cameraEnabled ? "Stop Camera" : "Start Camera"}
+            </button>
+            <button onClick={handleToggleMic} className={styles.button}>
+              {micEnabled ? "Mute Mic" : "Unmute Mic"}
             </button>
             <button
               onClick={handleShareScreen}
