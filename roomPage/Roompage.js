@@ -216,7 +216,7 @@ export default function RoomPage() {
             <button onClick={handleToggleCamera} className={styles.button}>
               {cameraEnabled ? "Stop Camera" : "Start Camera"}
             </button>
-            <button onClick={handleToggleMic} className={styles.button}>
+            <button onClick={handleToggleMic} className={styles.micbutton}>
               {micEnabled ? "Mute Mic" : "Unmute Mic"}
             </button>
             <button
