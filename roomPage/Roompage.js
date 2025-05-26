@@ -33,7 +33,7 @@ export default function RoomPage() {
   const handleJoin = async () => {
     try {
       const response = await axios.post(
-        "https://live-kit-backend.onrender.com/get-token",
+        process.env.NEXT_PUBLIC_TOKEN_ENDPOINT,
         {
           identity,
           roomName,
@@ -45,7 +45,7 @@ export default function RoomPage() {
       const room = new Room();
       roomRef.current = room;
 
-      await room.connect("https://meet.lcmgo.com", token);
+      await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
       console.log(process.env.NEXT_PUBLIC_LIVEKIT_URL)
 
       if (isPublisher) {
