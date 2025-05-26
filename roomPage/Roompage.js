@@ -6,7 +6,6 @@ import {
   RoomEvent,
   createLocalTracks,
   LocalVideoTrack,
-  LocalAudioTrack,
 } from "livekit-client";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
@@ -47,10 +46,13 @@ export default function RoomPage() {
       roomRef.current = room;
 
       await room.connect("https://meet.lcmgo.com", token);
+      
+      
 
       if (isPublisher) {
         const localTracks = await createLocalTracks({ audio: true, video: true });
         for (const track of localTracks) {
+          console.log("Publishing:", track.kind);
           await room.localParticipant.publishTrack(track);
         }
 
@@ -63,10 +65,6 @@ export default function RoomPage() {
             }
           }, 300);
         }
-      } else {
-        // Audience user: only publish audio so host can hear them
-        const [audioTrack] = await createLocalTracks({ audio: true });
-        await room.localParticipant.publishTrack(audioTrack);
       }
 
       setJoined(true);
@@ -79,40 +77,36 @@ export default function RoomPage() {
         setParticipants((prev) => prev.filter((id) => id !== participant.identity));
       });
 
-      const attachRemoteTrack = (track, participant) => {
-        if (track.kind === "video") {
-          let videoEl = remoteVideosRef.current[participant.identity];
-          if (!videoEl) {
-            const container = document.getElementById("remote-container");
-            if (!container) return;
-            videoEl = document.createElement("video");
-            videoEl.autoplay = true;
-            videoEl.playsInline = true;
-            videoEl.width = 300;
-            videoEl.style.borderRadius = "10px";
-            videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-            container.appendChild(videoEl);
-            remoteVideosRef.current[participant.identity] = videoEl;
-          }
-          track.attach(videoEl);
-        }
+   const attachRemoteTrack = (track, participant) => {
+  if (track.kind === "video") {
+    let videoEl = remoteVideosRef.current[participant.identity];
+    if (!videoEl) {
+      const container = document.getElementById("remote-container");
+      if (!container) return;
+      videoEl = document.createElement("video");
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      videoEl.width = 300;
+      videoEl.style.borderRadius = "10px";
+      videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+      container.appendChild(videoEl);
+      remoteVideosRef.current[participant.identity] = videoEl;
+    }
+    track.attach(videoEl);
+  }
 
-        if (track.kind === "audio") {
-          const audioEl = document.createElement("audio");
-          audioEl.autoplay = true;
-          audioEl.controls = false;
-          audioEl.playsInline = true;
-          audioEl.muted = false;
-          track.attach(audioEl);
-          document.body.appendChild(audioEl);
-          console.log(`🎧 Audio track attached for ${participant.identity}`);
-        }
-      };
+  if (track.kind === "audio") {
+    const audioEl = document.createElement("audio");
+    audioEl.autoplay = true;
+    audioEl.controls = false;
+    track.attach(audioEl);
+    document.body.appendChild(audioEl); // or just attach without appending
+  }
+};
+
 
       room.on(RoomEvent.TrackSubscribed, attachRemoteTrack);
-      room.on(RoomEvent.TrackPublicationSubscribed, (track, publication, participant) => {
-        if (track) attachRemoteTrack(track, participant);
-      });
+      room.on(RoomEvent.TrackPublicationSubscribed, attachRemoteTrack);
 
       for (const participant of room.remoteParticipants.values()) {
         for (const publication of participant.trackPublications.values()) {
@@ -178,6 +172,7 @@ export default function RoomPage() {
   return (
     <div className={styles.container}>
       <h1 className={styles.heading}>🎥 LiveKit Video Room</h1>
+
       <h2>You’re in the room: <strong>{roomName}</strong></h2>
 
       {isPublisher && (
