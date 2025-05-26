@@ -45,8 +45,7 @@ export default function RoomPage() {
       const room = new Room();
       roomRef.current = room;
 
-      await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
-      
+      await room.connect("https://meet.lcmgo.com", token);
       console.log(process.env.NEXT_PUBLIC_LIVEKIT_URL)
 
       if (isPublisher) {
