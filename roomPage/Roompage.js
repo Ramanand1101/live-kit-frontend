@@ -46,7 +46,7 @@ export default function RoomPage() {
       roomRef.current = room;
 
       await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
-      console.log(process.env.NEXT_PUBLIC_LIVEKIT_URL)
+      console.log("ssaaSAs",process.env.NEXT_PUBLIC_LIVEKIT_URL)
 
       if (isPublisher) {
         const localTracks = await createLocalTracks({ audio: true, video: true });
