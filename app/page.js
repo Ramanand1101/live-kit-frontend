@@ -8,7 +8,7 @@ export default function LandingPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>🚀 Welcome to LiveKit Connect</h1>
+      <h1 className={styles.title}>🚀 Welcome to LCM-GO Connect</h1>
       <p className={styles.subtitle}>Join or create a room to start your live video session.</p>
 
       <div className={styles.buttons}>
