@@ -12,9 +12,9 @@ export default function LandingPage() {
       <p className={styles.subtitle}>Join or create a room to start your live video session.</p>
 
       <div className={styles.buttons}>
-        <button onClick={() => router.push("/join")} className={styles.primary}>
+        {/* <button onClick={() => router.push("/join")} className={styles.primary}>
           Join a Room
-        </button>
+        </button> */}
         {/* <button onClick={() => router.push("/room?name=guest&room=demo&role=audience")} className={styles.secondary}>
           Join Demo Room
         </button> */}
