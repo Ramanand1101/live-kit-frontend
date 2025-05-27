@@ -15,9 +15,9 @@ export default function LandingPage() {
         <button onClick={() => router.push("/join")} className={styles.primary}>
           Join a Room
         </button>
-        <button onClick={() => router.push("/room?name=guest&room=demo&role=audience")} className={styles.secondary}>
+        {/* <button onClick={() => router.push("/room?name=guest&room=demo&role=audience")} className={styles.secondary}>
           Join Demo Room
-        </button>
+        </button> */}
       </div>
     </div>
   );
