@@ -51,7 +51,7 @@ export default function JoinForm({
           </button>
 
           <div className="text-center">
-            <p className="text-white/50 text-sm">Powered by LiveKit</p>
+            <p className="text-white/50 text-sm">Powered by LCM-GO</p>
           </div>
         </div>
       </div>
