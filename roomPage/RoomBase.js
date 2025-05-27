@@ -183,66 +183,21 @@ export default function RoomBase({ identity, roomName, isHost }) {
   //     console.error("Screen share error", err);
   //   }
   // };
-// const handleShareScreen = async () => {
-//   try {
-//     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-//     const screenTrack = stream.getVideoTracks()[0];
-//     const room = roomRef.current;
-//     const existingTrack = currentVideoTrackRef.current;
-
-//     // Remove camera track if it exists
-//     if (existingTrack) {
-//       await room.localParticipant.unpublishTrack(existingTrack);
-//       existingTrack.stop();
-//       existingTrack.detach();
-//       if (localVideoRef.current) {
-//         localVideoRef.current.srcObject = null;
-//       }
-//     }
-
-//     // Publish screen track
-//     const screenVideoTrack = new LocalVideoTrack(screenTrack);
-//     await room.localParticipant.publishTrack(screenVideoTrack);
-//     screenVideoTrack.attach(localVideoRef.current);
-//     currentVideoTrackRef.current = screenVideoTrack;
-//     setCameraEnabled(false);
-
-//     // When screen share is manually stopped
-//     screenTrack.onended = async () => {
-//       await room.localParticipant.unpublishTrack(screenVideoTrack);
-//       screenVideoTrack.stop();
-//       screenVideoTrack.detach();
-//       if (localVideoRef.current) {
-//         localVideoRef.current.srcObject = null;
-//       }
-
-//       // Re-enable camera
-//       const [newCameraTrack] = await createLocalTracks({ video: true });
-//       await room.localParticipant.publishTrack(newCameraTrack);
-//       newCameraTrack.attach(localVideoRef.current);
-//       currentVideoTrackRef.current = newCameraTrack;
-//       setCameraEnabled(true);
-//     };
-//   } catch (err) {
-//     console.error("Screen share error", err);
-//   }
-// };
-
 const handleShareScreen = async () => {
   try {
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
-        width: { max: 640 },
-        height: { max: 360 },
-        frameRate: { max: 10 },
-      }
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 15, max: 30 },
+      },
     });
 
     const screenTrack = stream.getVideoTracks()[0];
     const room = roomRef.current;
     const existingTrack = currentVideoTrackRef.current;
 
-    // Remove existing video track (camera or previous screen)
+    // Remove camera track if it exists
     if (existingTrack) {
       await room.localParticipant.unpublishTrack(existingTrack);
       existingTrack.stop();
@@ -252,14 +207,20 @@ const handleShareScreen = async () => {
       }
     }
 
-    // Publish new screen share track
+    // Publish screen track
     const screenVideoTrack = new LocalVideoTrack(screenTrack);
-    await room.localParticipant.publishTrack(screenVideoTrack);
+    await room.localParticipant.publishTrack(screenVideoTrack, {
+      simulcast: false,
+      videoEncoding: {
+        maxBitrate: 1500_000, // 1.5 Mbps for 720p
+        maxFramerate: 15,
+      },
+    });
     screenVideoTrack.attach(localVideoRef.current);
     currentVideoTrackRef.current = screenVideoTrack;
     setCameraEnabled(false);
 
-    // On screen share stop, restore camera
+    // When screen share is manually stopped
     screenTrack.onended = async () => {
       await room.localParticipant.unpublishTrack(screenVideoTrack);
       screenVideoTrack.stop();
@@ -268,6 +229,7 @@ const handleShareScreen = async () => {
         localVideoRef.current.srcObject = null;
       }
 
+      // Re-enable camera
       const [newCameraTrack] = await createLocalTracks({ video: true });
       await room.localParticipant.publishTrack(newCameraTrack);
       newCameraTrack.attach(localVideoRef.current);
@@ -278,6 +240,7 @@ const handleShareScreen = async () => {
     console.error("Screen share error", err);
   }
 };
+
 
   return (
     <div className={styles.container}>
