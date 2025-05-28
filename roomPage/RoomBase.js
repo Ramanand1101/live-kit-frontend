@@ -13,7 +13,7 @@ import styles from "@/app/room/room.module.css";
 export default function RoomBase({ identity, roomName, isHost }) {
   const [joined, setJoined] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(isHost);
   const [participants, setParticipants] = useState([]);
 
   const localVideoRef = useRef(null);
@@ -29,11 +29,11 @@ export default function RoomBase({ identity, roomName, isHost }) {
   const handleJoin = async () => {
     try {
       const response = await axios.post(
-        "https://live-kit-backend.onrender.com/get-token",
+        "https://live-kit-backend.onrender.com/api/get-token",
         {
           identity,
           roomName,
-          isPublisher: true, // All get publisher access
+          isPublisher: true,
         }
       );
 
@@ -43,9 +43,13 @@ export default function RoomBase({ identity, roomName, isHost }) {
 
       await room.connect("https://meet.lcmgo.com", token);
 
-      const localTracks = isHost
-        ? await createLocalTracks({ audio: true, video: true })
-        : await createLocalTracks({ audio: true });
+      let localTracks = [];
+
+      if (isHost) {
+        localTracks = await createLocalTracks({ audio: true, video: true });
+      } else if (micEnabled) {
+        localTracks = await createLocalTracks({ audio: true });
+      }
 
       for (const track of localTracks) {
         await room.localParticipant.publishTrack(track);
@@ -54,6 +58,10 @@ export default function RoomBase({ identity, roomName, isHost }) {
       const videoTrack = localTracks.find((t) => t.kind === "video");
       const audioTrack = localTracks.find((t) => t.kind === "audio");
 
+      if (audioTrack) {
+        currentAudioTrackRef.current = audioTrack;
+      }
+
       if (isHost && videoTrack) {
         currentVideoTrackRef.current = videoTrack;
         setTimeout(() => {
@@ -61,10 +69,6 @@ export default function RoomBase({ identity, roomName, isHost }) {
             videoTrack.attach(localVideoRef.current);
           }
         }, 300);
-      }
-
-      if (audioTrack) {
-        currentAudioTrackRef.current = audioTrack;
       }
 
       setJoined(true);
@@ -79,19 +83,30 @@ export default function RoomBase({ identity, roomName, isHost }) {
 
       const attachRemoteTrack = (track, participant) => {
         if (track.kind === "video") {
-          let videoEl = remoteVideosRef.current[participant.identity];
-          if (!videoEl) {
-            const container = document.getElementById("remote-container");
-            if (!container) return;
-            videoEl = document.createElement("video");
-            videoEl.autoplay = true;
-            videoEl.playsInline = true;
-            videoEl.width = 300;
-            videoEl.style.borderRadius = "10px";
-            videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-            container.appendChild(videoEl);
-            remoteVideosRef.current[participant.identity] = videoEl;
+          let existingVideo = remoteVideosRef.current[participant.identity];
+          if (existingVideo) {
+            try {
+              track.detach(existingVideo);
+              existingVideo.srcObject = null;
+              existingVideo.remove();
+            } catch (e) {
+              console.warn("Error cleaning up old video", e);
+            }
+            delete remoteVideosRef.current[participant.identity];
           }
+
+          const container = document.getElementById("remote-container");
+          if (!container) return;
+
+          const videoEl = document.createElement("video");
+          videoEl.autoplay = true;
+          videoEl.playsInline = true;
+          videoEl.width = 300;
+          videoEl.style.borderRadius = "10px";
+          videoEl.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+          container.appendChild(videoEl);
+
+          remoteVideosRef.current[participant.identity] = videoEl;
           track.attach(videoEl);
         }
 
@@ -161,90 +176,63 @@ export default function RoomBase({ identity, roomName, isHost }) {
     }
   };
 
-  // const handleShareScreen = async () => {
-  //   try {
-  //     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-  //     const screenTrack = stream.getVideoTracks()[0];
-  //     const room = roomRef.current;
-  //     const existing = currentVideoTrackRef.current;
+  const handleShareScreen = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 15, max: 30 },
+        },
+      });
 
-  //     if (existing) {
-  //       await room.localParticipant.unpublishTrack(existing);
-  //       existing.stop();
-  //       existing.detach();
-  //     }
+      const screenTrack = stream.getVideoTracks()[0];
+      const room = roomRef.current;
+      const existingTrack = currentVideoTrackRef.current;
 
-  //     const livekitTrack = new LocalVideoTrack(screenTrack);
-  //     await room.localParticipant.publishTrack(livekitTrack);
-  //     livekitTrack.attach(localVideoRef.current);
-  //     currentVideoTrackRef.current = livekitTrack;
-  //     setCameraEnabled(false);
-  //   } catch (err) {
-  //     console.error("Screen share error", err);
-  //   }
-  // };
-const handleShareScreen = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        frameRate: { ideal: 15, max: 30 },
-      },
-    });
-
-    const screenTrack = stream.getVideoTracks()[0];
-    const room = roomRef.current;
-    const existingTrack = currentVideoTrackRef.current;
-
-    // Remove camera track if it exists
-    if (existingTrack) {
-      await room.localParticipant.unpublishTrack(existingTrack);
-      existingTrack.stop();
-      existingTrack.detach();
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
+      if (existingTrack) {
+        await room.localParticipant.unpublishTrack(existingTrack);
+        existingTrack.stop();
+        existingTrack.detach();
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = null;
+        }
       }
+
+      const screenVideoTrack = new LocalVideoTrack(screenTrack);
+      await room.localParticipant.publishTrack(screenVideoTrack, {
+        simulcast: false,
+        videoEncoding: {
+          maxBitrate: 1500_000,
+          maxFramerate: 15,
+        },
+      });
+      screenVideoTrack.attach(localVideoRef.current);
+      currentVideoTrackRef.current = screenVideoTrack;
+      setCameraEnabled(false);
+
+      screenTrack.onended = async () => {
+        await room.localParticipant.unpublishTrack(screenVideoTrack);
+        screenVideoTrack.stop();
+        screenVideoTrack.detach();
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = null;
+        }
+
+        const [newCameraTrack] = await createLocalTracks({ video: true });
+        await room.localParticipant.publishTrack(newCameraTrack);
+        newCameraTrack.attach(localVideoRef.current);
+        currentVideoTrackRef.current = newCameraTrack;
+        setCameraEnabled(true);
+      };
+    } catch (err) {
+      console.error("Screen share error", err);
     }
-
-    // Publish screen track
-    const screenVideoTrack = new LocalVideoTrack(screenTrack);
-    await room.localParticipant.publishTrack(screenVideoTrack, {
-      simulcast: false,
-      videoEncoding: {
-        maxBitrate: 1500_000, // 1.5 Mbps for 720p
-        maxFramerate: 15,
-      },
-    });
-    screenVideoTrack.attach(localVideoRef.current);
-    currentVideoTrackRef.current = screenVideoTrack;
-    setCameraEnabled(false);
-
-    // When screen share is manually stopped
-    screenTrack.onended = async () => {
-      await room.localParticipant.unpublishTrack(screenVideoTrack);
-      screenVideoTrack.stop();
-      screenVideoTrack.detach();
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
-      }
-
-      // Re-enable camera
-      const [newCameraTrack] = await createLocalTracks({ video: true });
-      await room.localParticipant.publishTrack(newCameraTrack);
-      newCameraTrack.attach(localVideoRef.current);
-      currentVideoTrackRef.current = newCameraTrack;
-      setCameraEnabled(true);
-    };
-  } catch (err) {
-    console.error("Screen share error", err);
-  }
-};
-
+  };
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>🎥 LiveKit Video Room</h1>
+      <h1 className={styles.heading}>🎥 LCM-GO Room</h1>
       <h2>You’re in the room: <strong>{roomName}</strong></h2>
 
       {isHost && (
