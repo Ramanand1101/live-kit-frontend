@@ -14,7 +14,7 @@ export default function CronTestPage() {
     setResponse(null);
 
     try {
-      const { data } = await api.get('/cron-courses/check-started'); // ✅ Use server API
+      const { data } = await api.get('/cron/check-inactive'); // ✅ Use server API
       setResponse(data);
     } catch (err) {
       setErrorMsg(err.message || 'Unexpected error');
