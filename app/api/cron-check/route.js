@@ -1,13 +1,12 @@
-// app/api/cron-courses/route.js
-
 import api from '@/services/api.server';
+
+export const config = {
+  schedule: '*/5 * * * *', // Runs every 5 minutes
+};
 
 export async function GET() {
   try {
-    console.log('⏰ Cron triggered at', new Date().toISOString());
-
-    const res = await api.get('/api/cron-courses/check-started'); // ✅ Adjusted path if internal
-
+    const res = await api.get('/cron-courses/check-started');
     console.log('✅ Cron executed successfully:', res.data);
 
     return Response.json({ success: true, data: res.data });
