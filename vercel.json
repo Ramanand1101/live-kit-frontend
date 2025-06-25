@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "/api/cron-check/route": {
+    "/app/api/cron-check/route": {
       "runtime": "edge"
     }
   }
