@@ -1,8 +1,8 @@
 {
-  "version": 2,
-  "functions": {
-    "/app/api/cron-check/route": {
-      "runtime": "edge"
+  "cron": [
+    {
+      "path": "api/cron-check",  
+      "schedule": "*/5 * * * *"  
     }
-  }
+  ]
 }
