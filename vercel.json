@@ -1,3 +1,9 @@
 {
-  "version": 2
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron-courses",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
