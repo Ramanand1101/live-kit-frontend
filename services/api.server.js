@@ -1,6 +1,6 @@
 const api = {
   get: async (url) => {
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3001/api';
+    const baseUrl = process.env.BACKEND_URL || 'https://live-kit-backend.onrender.com';
 
     const response = await fetch(`${baseUrl}${url}`, {
       method: 'GET',
