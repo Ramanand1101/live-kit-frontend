@@ -1,19 +1,15 @@
-import api from "@/services/api.server";
-
 export const config = {
-  schedule: "*/5 * * * *" // Run every 5 minutes (UTC time)
+  schedule: '*/5 * * * *', // Runs every 5 minutes
 };
 
 export async function GET() {
   try {
-    const res = await api.get("/cron-courses/check-started");
-    console.log("✅ Cron executed. Response:", res.data);
-
-    return Response.json({ success: true, data: res.data });
+    const res = await fetch('http://localhost:3001/api/cron-courses/check-started');
+    const data = await res.json();
+    return Response.json({ success: true, data });
   } catch (error) {
-    console.error("❌ Cron failed:", error?.message || error);
     return Response.json(
-      { success: false, error: error?.message || "Internal Server Error" },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }
