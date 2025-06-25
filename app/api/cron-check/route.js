@@ -1,8 +1,13 @@
+// app/api/cron-courses/route.js
+
 import api from '@/services/api.server';
 
 export async function GET() {
   try {
-    const res = await api.get('/cron-courses/check-started');
+    console.log('⏰ Cron triggered at', new Date().toISOString());
+
+    const res = await api.get('/api/cron-courses/check-started'); // ✅ Adjusted path if internal
+
     console.log('✅ Cron executed successfully:', res.data);
 
     return Response.json({ success: true, data: res.data });
